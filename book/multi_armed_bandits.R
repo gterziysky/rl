@@ -106,16 +106,20 @@ main <- function() {
   }
   dt <- data.table::rbindlist(res2, fill = TRUE)
 
-  v <- dt[, .(average_reward = sum(average_reward) / num_runs), by = .(epsilon, steps)]
+  v <- dt[, .(average_reward = mean(rewards), # sum(average_reward) / num_runs,
+              opt_act_p = mean(optimal_action)), by = .(epsilon, steps)]
   v[, epsilon := as.character(epsilon)]
-
-  p <- ggplot2::ggplot(data = v,
+  # Generate Figure 2.2 on p. 29 of Sutton and Barto (2018)
+  p1 <- ggplot2::ggplot(data = v,
                        ggplot2::aes(x = steps, y = average_reward, group = epsilon)) +
     ggplot2::geom_line(ggplot2::aes(colour = epsilon))
-
-  # p <- ggplot2::ggplot(data = dt[epsilon == 0.1],
-  #                      ggplot2::aes(x = steps, y = average_reward, group = epsilon)) +
-  #   ggplot2::geom_line()
-  print(p)
+  
+  p2 <- ggplot2::ggplot(data = v,
+                       ggplot2::aes(x = steps, y = opt_act_p, group = epsilon)) +
+    ggplot2::geom_line(ggplot2::aes(colour = epsilon))
+  
+  Rmisc::multiplot(p1, p2, cols = 1)
+  
+  return(0)
 }
 
