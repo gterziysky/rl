@@ -1,6 +1,20 @@
 #vars <- list(qval = NULL, q_star = NULL, action_count = NULL)
 vars <- new.env()
 
+#' Select the maximum value from a vector, breaking ties randomly
+#'
+#' @param vec input vector
+#'
+#' @return vector of length 1 with the maximum element of the input
+#' @export
+#'
+#' @examples
+which_max2 <- function(vec) {
+  max_id <- which(vec == max(vec))
+  if (length(max_id) > 1) max_id <- sample(max_id, 1)
+  return(max_id)
+}
+
 #' Call the agent to take an action
 #'
 #' @param epsilon exploration probability/rate
@@ -17,9 +31,7 @@ agent <- function(epsilon) {
   if (runif(1) < epsilon) return(sample(x = seq_len(vars$k), size = 1))
   
   # select the action with highest Qval, breaking ties randomly)
-  max_id <- which(vars$qval == max(vars$qval))
-  if (length(max_id) > 1) max_id <- sample(max_id, 1)
-  return(max_id)
+  return(which_max2(vars$qval))
 }
 
 #' Passes an action to the RL environment and obtains a reward
