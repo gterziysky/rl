@@ -34,6 +34,26 @@ agent <- function(epsilon) {
   return(which_max2(vars$qval))
 }
 
+#' Call an upper-confidence-bound agent to take an action
+#'
+#' @param c coefficient which controls the degree of exploration
+#' @param t step
+#'
+#' @return integer - the action from 1 to number of bandit arms.
+#' @export
+#'
+#' @examples
+ucb_agent <- function(c, t) {
+  stopifnot(c > 0)
+  N_t <- vars$action_count
+  if (any(N_t == 0)) {
+    # If N_t(a) == 0, a is considered to be a maximising action
+    N_t[N_t == 0] <- Inf
+    return(which_max2(N_t))
+  }
+  return(which_max2(vars$qval + c * sqrt(log(t) / N_t)))
+}
+
 #' Passes an action to the RL environment and obtains a reward
 #'
 #' @param a action, integer from 1 to the number of bandit arms
@@ -65,8 +85,14 @@ step <- function(a, alpha=NULL) {
 #' Simulate a run for the k-armed testbed
 #'
 #' @param steps number of time steps
-#' @param epsilon exploration probability
+#' @param epsilon exploration probability, if \code{use_ucb_agent} is T then this becomes 
+#' coefficient of the degree of exploration (see p 36 of Sutton & Barto (2018))
 #' @param alpha step-size parameter
+#' @param stationary_q_star logical which controls whether the true action values
+#' remain constant or slowly drift with time
+#' @param initial_qval a vector of initial action values, if NULL, 0 will be used
+#' @param use_ucb_agent logical which controls whether the Upper-confidence-bound or
+#' epsilon-greedy agent is used 
 #'
 #' @return data.table with reward, average reward and optimal action for each of the time steps
 #' @export
@@ -75,7 +101,8 @@ simulate_run <- function(steps = 1000,
                          epsilon = 0.1,
                          alpha = NULL,
                          stationary_q_star = T,
-                         initial_qval = NULL) {
+                         initial_qval = NULL,
+                         use_ucb_agent = F) {
   # Generate a k-armed bandit task/problem
   if (!stationary_q_star) {
     # For exercise 2.5 on p. 33 of Sutton and Barto (2018)
@@ -103,7 +130,13 @@ simulate_run <- function(steps = 1000,
     if (!stationary_q_star) {
       vars$q_star <- vars$q_star + rnorm(vars$k, mean = 0, sd = 0.01)
     }
-    action <- agent(epsilon = epsilon)
+    
+    if (use_ucb_agent) {
+      action <- ucb_agent(c = epsilon, t = i)
+    } else {
+      action <- agent(epsilon = epsilon)
+    }
+    
     if (action == which.max(vars$q_star)) optimal_action[i] <- T else optimal_action[i] <- F
     rewards[i] <- step(action, alpha = alpha)
   }
@@ -232,6 +265,76 @@ figure2.3 <- function() {
   # Rmisc::multiplot(p1, p2, cols = 1)
 }
 
+#' Generate Figure 2.4 of Sutton and Barto (2018)
+#'
+#' @return
+#' @export
+#'
+#' @examples
+figure2.4 <- function() {
+  set.seed(0)
+  k_armed <- 10
+  vars$k <- k_armed
+  num_runs <- 100
+  num_steps <- 1000
+  epsilon <- c(2, 0.1)
+  use_ucb_agent <- logical(length(epsilon))
+  use_ucb_agent[1] <- T
+  stationary_q_star <- T
+  # report progress every 10 percent
+  report_step <- as.integer(num_runs * 0.1)
+  
+  res2 <- list()
+  for (i in seq_along(epsilon)) {
+    eps <- epsilon[i]
+    res <- list()
+    for (j in seq_len(num_runs)) {
+      # report progress
+      if (j %% report_step == 0 || j == 1 || j == num_runs)
+        futile.logger::flog.info("eps: %.4f, %d / %d", eps, j, num_runs)
+      # initial Q* = +5
+      if (use_ucb_agent[i]) {
+        # use UCB action selection
+        dt <- simulate_run(steps = num_steps,
+                           epsilon = eps,
+                           alpha = 0.1, # const step size or NULL for sample-average
+                           stationary_q_star = stationary_q_star,
+                           use_ucb_agent = T)
+        dt[, `:=`(run = j, epsilon = eps, ucb = T)]
+      } else {
+        # use epsilon-greedy action selection
+        dt <- simulate_run(steps = num_steps,
+                           epsilon = eps,
+                           alpha = 0.1, # const step size or NULL for sample-average
+                           stationary_q_star = stationary_q_star)
+        dt[, `:=`(run = j, epsilon = eps, ucb = F)]
+      }
+      res[[j]] <- dt
+    }
+    res2[[i]] <- data.table::rbindlist(res, fill = TRUE)
+  }
+  dt <- data.table::rbindlist(res2, fill = TRUE)
+  
+  v <- dt[, .(average_reward = mean(rewards), # sum(average_reward) / num_runs,
+              opt_act_p = mean(optimal_action)), by = .(ucb, steps)]
+  # v[, `:=`(epsilon = as.character(epsilon))]
+  
+  v[ucb == T, series_name := "UCB c=2"]
+  v[ucb == F, series_name := "eps-greedy, eps=0.1"]
+  
+  p1 <- ggplot2::ggplot(data = v,
+                        ggplot2::aes(x = steps, y = average_reward, group = series_name)) +
+    ggplot2::geom_line(ggplot2::aes(colour = series_name)) + ggplot2::ylim(c(-1.5, 1.5))
+  
+  # p2 <- ggplot2::ggplot(data = v,
+  #                       ggplot2::aes(x = steps, y = opt_act_p, group = epsilon)) +
+  #   ggplot2::geom_line(ggplot2::aes(colour = epsilon)) + ggplot2::ylim(c(0, 1))
+  
+  print(p1)
+  
+  # Rmisc::multiplot(p1, p2, cols = 1)
+}
+
 #' Repeats independent runs of the different bandit problems
 #'
 #' @return
@@ -239,8 +342,9 @@ figure2.3 <- function() {
 #' 
 #'
 main <- function() {
-  figure2.2()
-  figure2.3()
+  #figure2.2()
+  #figure2.3()
+  figure2.4()
   return(0)
 }
 
