@@ -1,8 +1,8 @@
 version: "3.9"
 
 services:
-  wintrader:
-    container_name: wintrader
+  rlenv:
+    container_name: rldev
     env_file:
       - app/devcontainer.env
     build:

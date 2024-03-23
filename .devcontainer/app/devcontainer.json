@@ -1,0 +1,20 @@
+{
+    "name": "rlenv",
+    "dockerComposeFile": [
+        "../docker-compose.yaml"
+    ],
+    "service": "rlenv",
+    "workspaceFolder": "/workspaces",
+    "customizations": {
+        "extensions": [
+            "ms-python.python",
+            "ms-python.vscode-pylance",
+            "ms-toolsai.jupyter",
+            "ms-vscode-remote.remote-containers",
+            "ms-vscode.cpptools-extension-pack",
+            "ms-vscode.makefile-tools"
+        ]
+    }
+    ,"postCreateCommand": "/workspaces/.devcontainer/app/init.sh"
+    ,"initializeCommand": "ls"
+}
