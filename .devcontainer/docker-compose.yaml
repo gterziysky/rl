@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  wintrader:
+    container_name: wintrader
+    env_file:
+      - app/devcontainer.env
+    build:
+      dockerfile: Dockerfile
+      context: ./app
+      shm_size: "1gb"
+    shm_size: "1gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+    volumes:
+      - ../:/workspaces
+    # Overrides default command so things don't shut down after the process ends.
+    # command: /bin/sh -c "while sleep 1000; do ;; done"
+    command: >
+      bash -c "tail -f /dev/null"
+
