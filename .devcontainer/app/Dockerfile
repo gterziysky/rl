@@ -5,7 +5,7 @@ FROM --platform=linux/amd64 nvidia/cuda:11.8.0-base-ubuntu22.04
 # # install build essentials
 RUN apt-get update \
   && export DEBIAN_FRONTEND=noninteractive \
-  && apt-get install -y build-essential git-core ntpdate curl wget nano procps
+  && apt-get install -y build-essential git-core ntpdate curl wget nano procps ffmpeg
 
 RUN apt-get install -y python3 python3-pip
 # All we need is the Nvidia driver as PyTorch comes with
@@ -16,8 +16,7 @@ RUN pip3 install torch torchvision torchaudio --index-url https://download.pytor
 # install legacy package ptan to make things work with the DRL book
 # for more information on using Tensorboard with PyTorch, see link
 # https://pytorch.org/tutorials/recipes/recipes/tensorboard_with_pytorch.html#run-tensorboard
-RUN pip3 install ptan "gym[atari]==0.25.2" opencv-python-headless tensorboard matplotlib pandas
+RUN pip3 install ptan "gym[atari,classic_control]==0.25.2" opencv-python-headless tensorboard matplotlib pandas
 
 # TODO: substitute by gymnasium and opencv
 # RUN pip3 install "gymnasium[atari]" opencv-python
-
