@@ -78,7 +78,7 @@ def filter_batch(batch, percentile):
 if __name__ == "__main__":
     env = gym.make("CartPole-v0")
     # https://github.com/openai/gym/issues/2674
-    # env = gym.wrappers.RecordVideo(env=env, video_folder="mon/", episode_trigger=lambda episode: episode % 10 == 0, name_prefix="cartpole_v0_episode")
+    # env = gym.wrappers.RecordVideo(env=env, video_folder="mon/", episode_trigger=lambda episode: episode % 100 == 0, name_prefix="cartpole_v0_episode")
     obs_size = env.observation_space.shape[0]
     n_actions = env.action_space.n
 
